@@ -1,0 +1,17 @@
+*/.DS_Store
+.DS_Store
+*/__pycache__
+*__pycache__
+*pycache*
+/.ipynb_checkpoints
+/.idea
+*/._*
+*/.egg
+*/.egg-info
+*/.ipynb_checkpoints
+*ckpt*
+*/*.index
+*.wbproj
+*.cache
+data/
+.vscode
