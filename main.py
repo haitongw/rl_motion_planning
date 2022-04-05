@@ -38,15 +38,18 @@ def main():
     torch.set_num_threads(1)    # CPU
     device = torch.device("cuda:0" if args.cuda else "cpu")
 
+    # multiprocessing, record episode,....
     envs = make_vec_envs(args.env_name, args.seed, args.num_processes,
                          args.gamma, args.log_dir, device, False)
 
+    # neural networks
     actor_critic = Policy(
         envs.observation_space.shape,
         envs.action_space,
         base_kwargs={'recurrent': args.recurrent_policy})
     actor_critic.to(device)
 
+    # neural nets update
     agent = A2C_ACKTR(
         actor_critic,
         args.value_loss_coef,
@@ -67,8 +70,7 @@ def main():
     episode_rewards = deque(maxlen=10)
 
     start = time.time()
-    num_updates = int(
-        args.num_env_steps) // args.num_steps // args.num_processes
+    num_updates = int(args.num_env_steps) // args.num_steps // args.num_processes
     for j in range(num_updates):
 
         if args.use_linear_lr_decay:

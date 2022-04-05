@@ -26,6 +26,7 @@ def make_env(env_id, seed, rank, log_dir, allow_early_resets):
         if str(env.__class__.__name__).find('TimeLimit') >= 0:
             env = TimeLimitMask(env)
 
+        # record episode
         if log_dir is not None:
             env = Monitor(env,
                           os.path.join(log_dir, str(rank)),
@@ -61,7 +62,7 @@ def make_vec_envs(env_name,
     ]
 
     if len(envs) > 1:
-        envs = SubprocVecEnv(envs)
+        envs = SubprocVecEnv(envs)  # multiprocessing
     else:
         envs = DummyVecEnv(envs)
 
@@ -71,7 +72,7 @@ def make_vec_envs(env_name,
         else:
             envs = VecNormalize(envs, gamma=gamma)
 
-    envs = VecPyTorch(envs, device)
+    envs = VecPyTorch(envs, device) # for pytorch
 
     if num_frame_stack is not None:
         envs = VecPyTorchFrameStack(envs, num_frame_stack, device)

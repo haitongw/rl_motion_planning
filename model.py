@@ -28,6 +28,7 @@ class Policy(nn.Module):
         self.base = base(obs_shape[0], **base_kwargs)
 
         if action_space.__class__.__name__ == "Discrete":
+            # linear layer is folded into Categorical implementation
             num_outputs = action_space.n
             self.dist = Categorical(self.base.output_size, num_outputs)
         elif action_space.__class__.__name__ == "Box":
@@ -204,6 +205,8 @@ class MLPBase(NNBase):
 
         init_ = lambda m: init(m, nn.init.orthogonal_, lambda x: nn.init.
                                constant_(x, 0), np.sqrt(2))
+
+        # Why not share the same neural networs?
 
         self.actor = nn.Sequential(
             init_(nn.Linear(num_inputs, hidden_size)), nn.Tanh(),
