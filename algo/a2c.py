@@ -40,8 +40,9 @@ class A2C_ACKTR():
         action_log_probs = action_log_probs.view(num_steps, num_processes, 1)
 
         advantages = rollouts.returns[:-1] - values
-        value_loss = advantages.pow(2).mean()
+        value_loss = advantages.pow(2).mean()   # This is mean squared error
 
+        # loss function for policy network
         action_loss = -(advantages.detach() * action_log_probs).mean()
 
         if self.acktr and self.optimizer.steps % self.optimizer.Ts == 0:
@@ -65,6 +66,7 @@ class A2C_ACKTR():
         (value_loss * self.value_loss_coef + action_loss -
          dist_entropy * self.entropy_coef).backward()
 
+        # mitigate gradient exploding
         if self.acktr == False:
             nn.utils.clip_grad_norm_(self.actor_critic.parameters(),
                                      self.max_grad_norm)
