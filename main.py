@@ -6,6 +6,8 @@ from collections import deque
 
 import gym
 import safety_gym
+from env import *
+
 import numpy as np
 import torch
 import torch.nn as nn
@@ -71,6 +73,7 @@ def main():
 
     start = time.time()
     num_updates = int(args.num_env_steps) // args.num_steps // args.num_processes
+    print(f"There will be {num_updates} updates.")
     for j in range(num_updates):
 
         if args.use_linear_lr_decay:

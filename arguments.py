@@ -93,12 +93,12 @@ def get_args():
         help='number of environment steps to train (default: 10e6)')
     parser.add_argument(
         '--env-name',
-        default='PongNoFrameskip-v4',
-        help='environment to train on (default: PongNoFrameskip-v4)')
+        default='point-pillar-v0',
+        help='environment to train on (default: point-pillar-v0)')
     parser.add_argument(
         '--log-dir',
-        default='/tmp/gym/',
-        help='directory to save agent logs (default: /tmp/gym)')
+        default='./log/',
+        help='directory to save agent logs (default: ./log/)')
     parser.add_argument(
         '--save-dir',
         default='./trained_models/',

@@ -21,7 +21,7 @@ def make_env(env_id, seed, rank, log_dir, allow_early_resets):
     def _thunk():
         env = gym.make(env_id)
 
-        env.seed(seed + rank)
+        env.seed(seed + 10000 * rank)   # In Safety Gym, every time env is rest, seed increment by 1
 
         if str(env.__class__.__name__).find('TimeLimit') >= 0:
             env = TimeLimitMask(env)
