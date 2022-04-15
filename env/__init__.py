@@ -1,4 +1,3 @@
-from importlib.metadata import entry_points
 from .custom_env import CustomEngine
 from gym.envs.registration import register
 
@@ -23,6 +22,7 @@ config = {
                             'observe_pillar_radius': True,
                             }
 }
+
 register(id='point-pillar-v0',
-        entry_points='CustomEngine',
+        entry_point='env.custom_env:CustomEngine',
         kwargs={'config':config})

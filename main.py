@@ -39,6 +39,7 @@ def main():
 
     torch.set_num_threads(1)    # CPU
     device = torch.device("cuda:0" if args.cuda else "cpu")
+    print(device)
 
     # multiprocessing, record episode,....
     envs = make_vec_envs(args.env_name, args.seed, args.num_processes,
@@ -48,7 +49,7 @@ def main():
     actor_critic = Policy(
         envs.observation_space.shape,
         envs.action_space,
-        base_kwargs={'recurrent': args.recurrent_policy})
+        base_kwargs={'recurrent': args.recurrent_policy,'hidden_size': 256})
     actor_critic.to(device)
 
     # neural nets update

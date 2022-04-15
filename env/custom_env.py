@@ -1,5 +1,3 @@
-import safety_gym
-import gym
 from safety_gym.envs.engine import Engine
 # from gym.utils.env_checker import check_env
 from gym.spaces import Box, Discrete
@@ -83,7 +81,6 @@ class CustomEngine(Engine):
         if self.observation_flatten:
             self.obs_flat_size = sum([np.prod(i.shape) for i in self.obs_space_dict.values()])
             self.observation_space = Box(-np.inf, np.inf, (self.obs_flat_size,), dtype=np.float32)
-            print(self.observation_space)
         if self.play:
             screen = pygame.display.set_mode((640,480))
             clock = pygame.time.Clock()
@@ -141,6 +138,7 @@ class CustomEngine(Engine):
             else:
                 action = [0,0]
         else:
+            action = int(np.squeeze(action))
             action = self.action_dict[action]
 
         obs, reward, done, info = super().step(action)
@@ -161,7 +159,7 @@ class CustomEngine(Engine):
             info['collsion'] = 1
             # print("collision")
         elif collision_dist < 0.2:
-            reward += -0.1 + 0.05 * collision_dist
+            reward += float(-0.1 + 0.05 * collision_dist)
             info['too_close'] = 1
             # print("too close to pillar")
 
@@ -169,26 +167,34 @@ class CustomEngine(Engine):
             obs = obs_flat
         return obs, reward, done, info
 
+    def reset(self):
+        obs = super().reset()
+        if self.observation_flatten:
+            obs_flat, obs_dict = obs
+        else:
+            obs_flat = obs
+        return obs_flat
 
-myenv = CustomEngine(config)
-myenv.seed(42)
-act = 0
-cnt = 0
-myenv.reset()
-done = False
-for i in range(12):
-    while True:
-        myenv.render()
-        state, reward, done, info = myenv.step(act)
-        if done:
-            break
-        cnt+=1
-        if cnt >= 100:
-            cnt = 0
-            # print(state)
-            # print('----------------------')
-
-    act+=1
+if __name__ == '__main__':
+    myenv = CustomEngine(config)
+    myenv.seed(42)
+    act = 0
+    cnt = 0
     myenv.reset()
+    done = False
+    for i in range(12):
+        while True:
+            myenv.render()
+            state, reward, done, info = myenv.step(act)
+            if done:
+                break
+            cnt+=1
+            if cnt >= 100:
+                cnt = 0
+                # print(reward)
+                # print('----------------------')
 
-myenv.close()
+        act+=1
+        obs = myenv.reset()
+
+    myenv.close()
