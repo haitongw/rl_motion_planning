@@ -8,7 +8,11 @@ def get_args():
     parser.add_argument(
         '--algo', default='a2c', help='algorithm to use: a2c | ppo | acktr')
     parser.add_argument(
-        '--lr', type=float, default=7e-4, help='learning rate (default: 7e-4)')
+        '--lr', type=float, default=1e-3, help='learning rate (default: 7e-4)')
+    parser.add_argument(
+        '--model',
+        default=None,
+        help='Load a model to continue training (default: None')
     parser.add_argument(
         '--eps',
         type=float,
@@ -87,14 +91,18 @@ def get_args():
         default=None,
         help='eval interval, one eval per n updates (default: None)')
     parser.add_argument(
+        '--render-interval',
+        default=1e4,
+        help='render interval, one render per n updates (default: 10000)')
+    parser.add_argument(
         '--num-env-steps',
         type=int,
         default=10e6,
         help='number of environment steps to train (default: 10e6)')
     parser.add_argument(
         '--env-name',
-        default='point-pillar-v0',
-        help='environment to train on (default: point-pillar-v0)')
+        default='point-pillar-v1',
+        help='environment to train on (default: point-pillar-v1)')
     parser.add_argument(
         '--log-dir',
         default='./log/',

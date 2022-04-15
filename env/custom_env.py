@@ -9,28 +9,6 @@ def mat2yaw(mat):
     yaw = np.arctan2(s_theta, c_theta)
     return yaw
 
-config = {
-    'play': True,   # control robot from keyboard, Up, Down, Left, Right
-    'robot_base': 'xmls/new_point.xml',  # Which robot XML to use as the base
-    'num_steps':2000000,
-    'task': 'goal',
-    'observation_flatten': True,
-    'observe_goal_comp': False,
-    'observe_goal_dist': True,  # 0->1 distance closer to the goal, value closer to 1
-    'pillars_num': 3,
-    'sensors_obs': [],
-    'constrain_pillars': True,
-    'reward_distance': 0,
-    'custom_observation': {'observe_robot_vel': True,
-                            'observe_robot_pos': True,
-                            'observe_robot_yaw': True,
-                            'observe_v_pref': False,
-                            'observe_robot_radius': True,
-                            'observe_pillar_pos': True,
-                            'observe_pillar_radius': True,
-                            }
-}
-
 class CustomEngine(Engine):
 
     def __init__(self, config={}):
@@ -48,6 +26,7 @@ class CustomEngine(Engine):
         self.v_pref_meter = 0.1503
         self.w_pref = 0.3
         delta_w = 2 * self.w_pref / 5
+        self.robot_radius = 0.18
         # rewrite action space according to the paper
         self.action_space = Discrete(12)
         self.action_dict = {0:[self.v_pref, -self.w_pref],
@@ -78,12 +57,27 @@ class CustomEngine(Engine):
             self.obs_space_dict['pillar_pos'] = Box(-np.inf, np.inf, (self.pillars_num,2), dtype=np.float32)
         if self.observe_pillar_radius:
             self.obs_space_dict['pillar_radius'] = Box(0.0, 2.0, (1,), dtype=np.float32)
+        if self.observe_pillar_compass:
+            self.obs_space_dict['pillar_compass'] = Box(-np.inf, np.inf, (self.pillars_num,2), dtype=np.float32)
         if self.observation_flatten:
             self.obs_flat_size = sum([np.prod(i.shape) for i in self.obs_space_dict.values()])
             self.observation_space = Box(-np.inf, np.inf, (self.obs_flat_size,), dtype=np.float32)
         if self.play:
             screen = pygame.display.set_mode((640,480))
             clock = pygame.time.Clock()
+
+    def obs_compass_without_norm(self, pos):
+        pos = np.asarray(pos)
+        if pos.shape == (2,):
+            pos = np.concatenate([pos, [0]])  # Add a zero z-coordinate
+        # Get ego vector in world frame
+        vec = pos - self.world.robot_pos()
+        # Rotate into frame
+        vec = np.matmul(vec, self.world.robot_mat())
+        # Truncate
+        vec = vec[:self.compass_shape]
+        # Normalize
+        return vec        
 
     def obs(self):
         ''' Return the observation of our agent '''
@@ -103,11 +97,13 @@ class CustomEngine(Engine):
         if self.observe_v_pref:
             obs['v_pref'] = self.v_pref * 10    #TODO: fix this
         if self.observe_robot_radius:
-            obs['robot_radius'] = np.array([0.18]) # robot radius
+            obs['robot_radius'] = np.array([self.robot_radius]) # robot radius
         if self.observe_pillar_pos:
             obs['pillar_pos'] = np.array(self.pillars_pos)[:,:2]
         if self.observe_pillar_radius:
-            obs['pillar_radius'] = np.array([0.2])
+            obs['pillar_radius'] = np.array([self.pillars_size])
+        if self.observe_pillar_compass:
+            obs['pillar_compass'] = np.array(list(map(self.obs_compass_without_norm, self.pillars_pos)))
 
         if self.observation_flatten:
             flat_obs = np.zeros(self.obs_flat_size)
@@ -147,21 +143,23 @@ class CustomEngine(Engine):
             obs_flat, obs_dict = obs
         else:
             obs_dict = obs
-            
-        distance_array = np.hypot(obs_dict['robot_pos'][0] - obs_dict['pillar_pos'][:,0],
-                                  obs_dict['robot_pos'][1] - obs_dict['pillar_pos'][:,1])
-        min_dist = np.min(distance_array)
+        
+        if self.pillars_num > 0:
+            pillar_position = np.array(self.pillars_pos)[:,:2]
+            distance_array = np.hypot(self.robot_pos[:2][0] - pillar_position[:,0],
+                                      self.robot_pos[:2][1] - pillar_position[:,1])
+            min_dist = np.min(distance_array)
 
-        # collision
-        collision_dist = min_dist - (obs_dict['robot_radius'] + obs_dict['pillar_radius'])
-        if collision_dist < 0:
-            reward += -0.25
-            info['collsion'] = 1
-            # print("collision")
-        elif collision_dist < 0.2:
-            reward += float(-0.1 + 0.05 * collision_dist)
-            info['too_close'] = 1
-            # print("too close to pillar")
+            # collision
+            collision_dist = min_dist - (self.robot_radius + self.pillars_size)
+            if collision_dist < 0:
+                reward += -0.01
+                info['collsion'] = 1
+                # print("collision")
+            elif collision_dist < 0.2:
+                reward += float(-0.001 + 0.005 * collision_dist)
+                info['too_close'] = 1
+                # print("too close to pillar")
 
         if self.observation_flatten:
             obs = obs_flat
@@ -174,8 +172,38 @@ class CustomEngine(Engine):
         else:
             obs_flat = obs
         return obs_flat
+    
+    def close(self):
+        if self.viewer is not None:
+            # self.viewer.finish()
+            self.viewer = None
+            self._viewers = {}        
 
 if __name__ == '__main__':
+    config = {
+        'play': True,   # control robot from keyboard, Up, Down, Left, Right
+        'robot_base': 'xmls/new_point.xml',  # Which robot XML to use as the base
+        'num_steps':400000000,
+        'task': 'goal',
+        'observation_flatten': True,
+        'observe_goal_comp': True,
+        'observe_goal_dist': True,  # 0->1 distance closer to the goal, value closer to 1
+        'pillars_num': 3,
+        'sensors_obs': [],
+        'constrain_pillars': True,
+        'reward_distance': 5.0,   # sparse reward
+        'reward_goal': 5.0,       # sparse reward
+        'custom_observation': {'observe_robot_vel': True,
+                                'observe_robot_pos': False,
+                                'observe_robot_yaw': False,
+                                'observe_v_pref': False,
+                                'observe_robot_radius': True,
+                                'observe_pillar_pos': False,
+                                'observe_pillar_radius': True,
+                                'observe_pillar_compass': True,
+                                }
+    }
+
     myenv = CustomEngine(config)
     myenv.seed(42)
     act = 0
@@ -191,8 +219,9 @@ if __name__ == '__main__':
             cnt+=1
             if cnt >= 100:
                 cnt = 0
-                # print(reward)
-                # print('----------------------')
+                # print(state)
+                print("%.3f" % reward)
+                print('----------------------')
 
         act+=1
         obs = myenv.reset()

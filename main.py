@@ -6,7 +6,7 @@ from collections import deque
 
 import gym
 import safety_gym
-from env import *
+import env
 
 import numpy as np
 import torch
@@ -45,11 +45,15 @@ def main():
     envs = make_vec_envs(args.env_name, args.seed, args.num_processes,
                          args.gamma, args.log_dir, device, False)
 
-    # neural networks
-    actor_critic = Policy(
-        envs.observation_space.shape,
-        envs.action_space,
-        base_kwargs={'recurrent': args.recurrent_policy,'hidden_size': 256})
+    if args.model is not None:
+        model_dir = "./trained_models/a2c/" + args.model
+        actor_critic, _ = torch.load(model_dir)
+    else:
+        # neural networks
+        actor_critic = Policy(
+            envs.observation_space.shape,
+            envs.action_space,
+            base_kwargs={'recurrent': args.recurrent_policy,'hidden_size': 256})
     actor_critic.to(device)
 
     # neural nets update
@@ -151,6 +155,18 @@ def main():
             evaluate(actor_critic, obs_rms, args.env_name, args.seed,
                      args.num_processes, eval_log_dir, device)
 
+        # if (args.render_interval > 0) and (j % args.render_interval == 0):
+        #     demo_env = gym.make(args.env_name)
+        #     demo_obs = demo_env.reset()
+        #     while True:
+        #         demo_env.render()
+        #         demo_obs_tensor = torch.from_numpy(demo_obs).float().to(device)
+        #         _, demo_action, _, __ = actor_critic.act(demo_obs_tensor, None, None)
+        #         # act = int(np.squeeze(action.cpu().detach().numpy()))
+        #         demo_obs, demo_reward, demo_done, demo_info = demo_env.step(demo_action.cpu().detach().numpy())
+        #         if demo_done:
+        #             break
+        #     demo_env.close()
 
 if __name__ == "__main__":
     main()
