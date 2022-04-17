@@ -1,4 +1,3 @@
-from turtle import distance
 from safety_gym.envs.engine import Engine
 # from gym.utils.env_checker import check_env
 from gym.spaces import Box, Discrete
@@ -28,27 +27,6 @@ class CustomEngine(Engine):
         self.w_pref = 0.3
         delta_w = 2 * self.w_pref / 5
         self.robot_radius = 0.18
-        # rewrite action space according to the paper
-        # self.action_space = Discrete(12)
-        # self.action_dict = {0:[self.v_pref, -self.w_pref],
-        #                     1:[self.v_pref, -self.w_pref+delta_w],
-        #                     2:[self.v_pref, -self.w_pref+2*delta_w],
-        #                     3:[self.v_pref, self.w_pref-2*delta_w],
-        #                     4:[self.v_pref, self.w_pref-delta_w],
-        #                     5:[self.v_pref, self.w_pref],
-        #                     6:[0.5*self.v_pref, -self.w_pref],
-        #                     7:[0.5*self.v_pref, 0],
-        #                     8:[0.5*self.v_pref, self.w_pref],
-        #                     9:[0, -self.w_pref],
-        #                     10:[0, 0],
-        #                     11:[0, self.w_pref]}
-
-        # self.action_space = Discrete(5)
-        # self.action_dict = {0:[self.v_pref, 0],
-        #                     1:[0.5*self.v_pref, 0],
-        #                     2:[0, -self.w_pref],
-        #                     3:[0, 0],
-        #                     4:[0, self.w_pref]}
 
         # rewrite observation space
         if self.observe_robot_pos:
@@ -69,6 +47,15 @@ class CustomEngine(Engine):
             self.obs_space_dict['pillar_compass'] = Box(-np.inf, np.inf, (self.pillars_num,2), dtype=np.float32)
         if self.observe_pillar_dist:
             self.obs_space_dict['pillar_dist'] = Box(0.0, 1.0, (self.pillars_num,), np.float32)
+        if self.gremlins_num > 0:
+            feature_num = 0
+            if self.observe_gremlin_compass:
+                feature_num += 2
+            if self.observe_gremlin_dist:
+                feature_num += 1
+            if self.observe_gremlin_vel:
+                feature_num += 1
+            self.obs_space_dict['z_gremlin_state'] = Box(-np.inf, np.inf, (self.gremlins_num, feature_num), np.float32)
         if self.padding_obs:
             self.obs_space_dict['robot_vel'] = Box(-np.inf, np.inf, (1,), dtype=np.float32)
             # self.obs_space_dict['robot_radius'] = Box(0.0, 1.0, (1,), np.float32)
@@ -93,7 +80,10 @@ class CustomEngine(Engine):
         # Truncate
         vec = vec[:self.compass_shape]
         # Normalize
-        return vec        
+        return vec
+
+    def gremlins_obj_vel(self):        
+        return [self.world.body_vel(f'gremlin{i}obj').copy() for i in range(self.gremlins_num)]
 
     def obs(self):
         ''' Return the observation of our agent '''
@@ -108,7 +98,9 @@ class CustomEngine(Engine):
         if self.observe_robot_pos:
             obs['robot_pos'] = self.robot_pos[:2]
         if self.observe_robot_vel:
-            obs['robot_vel'] = np.array([np.hypot(*self.world.robot_vel()[:2])])
+            obs['robot_vel'] = np.array([np.hypot(*(self.world.robot_vel()[:2]))])
+            if obs['robot_vel'][0] < 0.01:
+                obs['robot_vel'][0] = 0
         if self.observe_robot_yaw:
             obs['robot_yaw'] = np.array([mat2yaw(self.world.robot_mat())])
         if self.observe_v_pref:
@@ -127,6 +119,24 @@ class CustomEngine(Engine):
             distance_array = np.hypot(self.robot_pos[:2][0] - pillar_position[:,0],
                                       self.robot_pos[:2][1] - pillar_position[:,1])
             obs['pillar_dist'] = np.exp(-(distance_array-0.38))
+        if self.gremlins_num > 0:
+            obs['z_gremlin_state'] = np.zeros((self.gremlins_num, 4))
+            if self.observe_gremlin_compass:
+                gremlin_compass = np.array(list(map(self.obs_compass, self.gremlins_obj_pos)))
+                obs['z_gremlin_state'][:,:2] = gremlin_compass
+            if self.observe_gremlin_dist:
+                gremlin_pos = np.array(self.gremlins_obj_pos)[:,:2]
+                gremlin_dist = np.hypot(self.robot_pos[:2][0] - gremlin_pos[:,0],
+                                        self.robot_pos[:2][1] - gremlin_pos[:,1])
+                # gremlin_dist = np.array([self.dist_xy(pos) for pos in gremlin_pos])
+                gremlin_dist = np.exp(-(gremlin_dist-0.28))
+                obs['z_gremlin_state'][:,2] = gremlin_dist
+            if self.observe_gremlin_vel:
+                gremlin_vel = np.array(self.gremlins_obj_vel())[:,:2]
+                gremlin_vel = np.array([np.hypot(*single_gremlin_vel) for single_gremlin_vel in gremlin_vel])
+                obs['z_gremlin_state'][:,3] = gremlin_vel
+            order_idx = np.argsort(obs['z_gremlin_state'][:,2])
+            obs['z_gremlin_state'] = obs['z_gremlin_state'][order_idx]
         if self.padding_obs:
             obs['robot_vel'] = np.array([np.hypot(*self.world.robot_vel()[:2])])
             # obs['robot_radius'] = np.array([self.robot_radius]) # robot radius
@@ -143,6 +153,19 @@ class CustomEngine(Engine):
             return (flat_obs, obs)
         else:
             return obs
+
+    def set_mocaps(self):
+        """
+        control gremlins
+        """
+        if self.gremlins_num: # self.constrain_gremlins:
+            phase = float(self.data.time)/6.0
+            for i in range(self.gremlins_num):
+                name = f'gremlin{i}'
+                target = np.array([np.sin(phase), np.cos(phase)]) * self.gremlins_travel
+                pos = np.r_[target, [self.gremlins_size]]
+                self.data.set_mocap_pos(name + 'mocap', pos)
+        
 
     def step(self, action=None):
         if self.play:
@@ -175,28 +198,48 @@ class CustomEngine(Engine):
         
         if self.pillars_num > 0:
             pillar_position = np.array(self.pillars_pos)[:,:2]
-            distance_array = np.hypot(self.robot_pos[:2][0] - pillar_position[:,0],
+            pillar_distance_array = np.hypot(self.robot_pos[:2][0] - pillar_position[:,0],
                                       self.robot_pos[:2][1] - pillar_position[:,1])
             # min_dist = np.min(distance_array)
 
             # collision
-            collision_dist = distance_array - (self.robot_radius + self.pillars_size)
-            min_collision_dist = np.min(collision_dist)
+            pillar_collision_dist = pillar_distance_array - (self.robot_radius + self.pillars_size)
+            min_pillar_collision_dist = np.min(pillar_collision_dist)
             # collision_dist = min_dist - (self.robot_radius + self.pillars_size)
-            if min_collision_dist < 0:
+            if min_pillar_collision_dist < 0:
                 reward += -self.collision_penalty
                 info['collsion'] = 1
                 # print("collision")
             # too close to obstacles    
             close_penalty = 0.0
-            for dist in collision_dist:
+            for dist in pillar_collision_dist:
                 if dist < self.too_close_dist and dist > 0:
                     info['too_close'] = 1
                     if self.nonlinear_penalty:
                         close_penalty += -self.collision_penalty * np.exp(-dist)
                     else:
-                        close_penalty += float(-self.too_close_penalty + self.too_close_penalty/self.too_close_dist * collision_dist)
-            
+                        close_penalty += float(-self.too_close_penalty + self.too_close_penalty/self.too_close_dist * dist)
+            reward += close_penalty
+
+        if self.gremlins_num > 0:
+            gremlin_pos = np.array(self.gremlins_obj_pos)[:,:2]
+            gremlin_dist = np.hypot(self.robot_pos[:2][0] - gremlin_pos[:,0],
+                                      self.robot_pos[:2][1] - gremlin_pos[:,1])
+            # collision
+            gremlin_collision_dist = gremlin_dist - (self.robot_radius + self.gremlins_size)
+            min_gremlin_collision_dist = np.min(gremlin_collision_dist)
+            if min_gremlin_collision_dist < 0:
+                reward += -self.collision_penalty
+                info['collsion'] = 1
+            # too close
+            close_penalty = 0.0
+            for dist in gremlin_collision_dist:
+                if dist < self.too_close_dist and dist > 0:
+                    info['too_close'] = 1
+                    if self.nonlinear_penalty:
+                        close_penalty += -self.collision_penalty * np.exp(-dist)
+                    else:
+                        close_penalty += float(-self.too_close_penalty + self.too_close_penalty/self.too_close_dist * dist)
             reward += close_penalty
 
             # elif collision_dist < self.too_close_dist:
@@ -231,16 +274,22 @@ if __name__ == '__main__':
     config = {
         'play': True,   # control robot from keyboard, Up, Down, Left, Right
         'robot_base': 'xmls/new_point.xml',  # Which robot XML to use as the base
-        'num_steps':4000000,
+        'num_steps':1000,
         'task': 'goal',
         'observation_flatten': True,
         'observe_goal_comp': True,
         'observe_goal_dist': True,  # 0->1 distance closer to the goal, value closer to 1
-        'pillars_num': 3,
+        'pillars_num': 0,
+        'gremlins_num': 5,
         'sensors_obs': [],
-        'constrain_pillars': True,
+        'constrain_pillars': False,
+        'constrain_gremlins': True,
+        'gremlins_keepout': 0.5,  # Radius for keeping out (contains gremlin path)
+        'gremlins_travel': 1.2,  # Radius of the circle traveled in
+        'gremlins_size': 0.1,  # Half-size (radius) of gremlin objects
+        'gremlins_density': 0.001,  # Density of gremlins
         'reward_distance': 1.0,   # dense reward
-        'reward_goal': 20.0,       # sparse reward
+        'reward_goal': 30.0,       # sparse reward
         'custom_observation': { 'padding_obs':False,
                                 'observe_robot_vel': True,
                                 'observe_robot_pos': False,
@@ -249,11 +298,14 @@ if __name__ == '__main__':
                                 'observe_robot_radius': False,
                                 'observe_pillar_pos': False,
                                 'observe_pillar_radius': False,
-                                'observe_pillar_compass': True,
-                                'observe_pillar_dist': True,
-                                'collision_penalty': 0.25,
+                                'observe_pillar_compass': False,
+                                'observe_pillar_dist': False,
+                                'observe_gremlin_vel': True,
+                                'observe_gremlin_compass': True,
+                                'observe_gremlin_dist': True,
+                                'collision_penalty': 0.2,
                                 'too_close_penalty': 0.1,
-                                'too_close_dist': 0.8,
+                                'too_close_dist': 0.6,
                                 'nonlinear_penalty': True,
                                 }
     }
@@ -275,10 +327,10 @@ if __name__ == '__main__':
             cnt+=1
             if cnt >= 100:
                 cnt = 0
-                # print(state)
+                print(state)
                 # print("%.3f" % total_reward)
-                print("%.4f" % reward)
-                # print('----------------------')
+                # print("%.4f" % reward)
+                print('----------------------')
 
         act+=1
         obs = myenv.reset()

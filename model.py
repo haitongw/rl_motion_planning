@@ -26,15 +26,18 @@ class Policy(nn.Module):
             else:
                 raise NotImplementedError
 
-        self.base = base(obs_shape[0], **base_kwargs)
+        if base_kwargs['recurrent']:
+            self.base = base(obs_shape[0], **base_kwargs)
+        else:
+            self.base = base(obs_shape[0], **base_kwargs)
 
         if action_space.__class__.__name__ == "Discrete":
             # linear layer is folded into Categorical implementation
             num_outputs = action_space.n
-            self.dist = Categorical(self.base.output_size, num_outputs)
+            self.dist = Categorical(base_kwargs['hidden_size'], num_outputs)
         elif action_space.__class__.__name__ == "Box":
             num_outputs = action_space.shape[0]
-            self.dist = DiagGaussian(self.base.output_size, num_outputs)
+            self.dist = DiagGaussian(base_kwargs['hidden_size'], num_outputs)
         elif action_space.__class__.__name__ == "MultiBinary":
             num_outputs = action_space.shape[0]
             self.dist = Bernoulli(self.base.output_size, num_outputs)
@@ -82,14 +85,14 @@ class Policy(nn.Module):
 
 
 class NNBase(nn.Module):
-    def __init__(self, recurrent, recurrent_input_size, hidden_size):
+    def __init__(self, recurrent, recurrent_input_size, hidden_size, device):
         super(NNBase, self).__init__()
 
         self._hidden_size = hidden_size
         self._recurrent = recurrent
-
+        self.device = device
         if recurrent:
-            self.gru = nn.GRU(recurrent_input_size, hidden_size)
+            self.gru = nn.GRU(recurrent_input_size, hidden_size, batch_first=True)
             for name, param in self.gru.named_parameters():
                 if 'bias' in name:
                     nn.init.constant_(param, 0)
@@ -110,62 +113,68 @@ class NNBase(nn.Module):
     def output_size(self):
         return self._hidden_size
 
-    def _forward_gru(self, x, hxs, masks):
-        if x.size(0) == hxs.size(0):
-            x, hxs = self.gru(x.unsqueeze(0), (hxs * masks).unsqueeze(0))
-            x = x.squeeze(0)
-            hxs = hxs.squeeze(0)
-        else:
-            # x is a (T, N, -1) tensor that has been flatten to (T * N, -1)
-            N = hxs.size(0)
-            T = int(x.size(0) / N)
+    def _forward_gru(self, x):
+        h0 = torch.zeros(1, x.size(0), self.output_size).to(self.device)
+        out, hn = self.gru(x, h0)
+        return out[:,-1,:]
 
-            # unflatten
-            x = x.view(T, N, x.size(1))
 
-            # Same deal with masks
-            masks = masks.view(T, N)
+    # def _forward_gru(self, x, hxs, masks):
+    #     if x.size(0) == hxs.size(0):
+    #         x, hxs = self.gru(x.unsqueeze(0), (hxs * masks).unsqueeze(0))
+    #         x = x.squeeze(0)
+    #         hxs = hxs.squeeze(0)
+    #     else:
+    #         # x is a (T, N, -1) tensor that has been flatten to (T * N, -1)
+    #         N = hxs.size(0)
+    #         T = int(x.size(0) / N)
 
-            # Let's figure out which steps in the sequence have a zero for any agent
-            # We will always assume t=0 has a zero in it as that makes the logic cleaner
-            has_zeros = ((masks[1:] == 0.0) \
-                            .any(dim=-1)
-                            .nonzero()
-                            .squeeze()
-                            .cpu())
+    #         # unflatten
+    #         x = x.view(T, N, x.size(1))
 
-            # +1 to correct the masks[1:]
-            if has_zeros.dim() == 0:
-                # Deal with scalar
-                has_zeros = [has_zeros.item() + 1]
-            else:
-                has_zeros = (has_zeros + 1).numpy().tolist()
+    #         # Same deal with masks
+    #         masks = masks.view(T, N)
 
-            # add t=0 and t=T to the list
-            has_zeros = [0] + has_zeros + [T]
+    #         # Let's figure out which steps in the sequence have a zero for any agent
+    #         # We will always assume t=0 has a zero in it as that makes the logic cleaner
+    #         has_zeros = ((masks[1:] == 0.0) \
+    #                         .any(dim=-1)
+    #                         .nonzero()
+    #                         .squeeze()
+    #                         .cpu())
 
-            hxs = hxs.unsqueeze(0)
-            outputs = []
-            for i in range(len(has_zeros) - 1):
-                # We can now process steps that don't have any zeros in masks together!
-                # This is much faster
-                start_idx = has_zeros[i]
-                end_idx = has_zeros[i + 1]
+    #         # +1 to correct the masks[1:]
+    #         if has_zeros.dim() == 0:
+    #             # Deal with scalar
+    #             has_zeros = [has_zeros.item() + 1]
+    #         else:
+    #             has_zeros = (has_zeros + 1).numpy().tolist()
 
-                rnn_scores, hxs = self.gru(
-                    x[start_idx:end_idx],
-                    hxs * masks[start_idx].view(1, -1, 1))
+    #         # add t=0 and t=T to the list
+    #         has_zeros = [0] + has_zeros + [T]
 
-                outputs.append(rnn_scores)
+    #         hxs = hxs.unsqueeze(0)
+    #         outputs = []
+    #         for i in range(len(has_zeros) - 1):
+    #             # We can now process steps that don't have any zeros in masks together!
+    #             # This is much faster
+    #             start_idx = has_zeros[i]
+    #             end_idx = has_zeros[i + 1]
 
-            # assert len(outputs) == T
-            # x is a (T, N, -1) tensor
-            x = torch.cat(outputs, dim=0)
-            # flatten
-            x = x.view(T * N, -1)
-            hxs = hxs.squeeze(0)
+    #             rnn_scores, hxs = self.gru(
+    #                 x[start_idx:end_idx],
+    #                 hxs * masks[start_idx].view(1, -1, 1))
 
-        return x, hxs
+    #             outputs.append(rnn_scores)
+
+    #         # assert len(outputs) == T
+    #         # x is a (T, N, -1) tensor
+    #         x = torch.cat(outputs, dim=0)
+    #         # flatten
+    #         x = x.view(T * N, -1)
+    #         hxs = hxs.squeeze(0)
+
+    #     return x, hxs
 
 
 class CNNBase(NNBase):
@@ -233,11 +242,14 @@ class MLPBase(NNBase):
         return self.critic_linear(hidden_critic), hidden_actor, rnn_hxs
 
 class MLPBase2(NNBase):
-    def __init__(self, num_inputs, recurrent=False, hidden_size=64):
-        super(MLPBase2, self).__init__(recurrent, num_inputs, hidden_size)
+    def __init__(self, num_inputs, recurrent=False, hidden_size=64, device=None):
+        if recurrent:
+            super(MLPBase2, self).__init__(recurrent, 4, 12, device)
+        else:
+            super(MLPBase2, self).__init__(recurrent, num_inputs, hidden_size)
 
         if recurrent:
-            num_inputs = hidden_size
+            num_inputs = 16
 
         init_ = lambda m: init(m, nn.init.orthogonal_, lambda x: nn.init.
                                constant_(x, 0), np.sqrt(2))
@@ -254,7 +266,11 @@ class MLPBase2(NNBase):
         x = inputs
 
         if self.is_recurrent:
-            x, rnn_hxs = self._forward_gru(x, rnn_hxs, masks)
+            obstacle_states = x[:,4:]
+            obstacle_states = obstacle_states.view(obstacle_states.shape[0], -1, 4)
+            obstacle_out = self._forward_gru(obstacle_states)
+            x = torch.cat((x[:,:4], obstacle_out), dim=1)
+            # x, rnn_hxs = self._forward_gru(x, rnn_hxs, masks)
 
         hidden_feature = self.shared_net(x)
 

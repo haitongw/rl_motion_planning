@@ -101,7 +101,7 @@ def get_args():
         help='number of environment steps to train (default: 10e6)')
     parser.add_argument(
         '--env-name',
-        default='point-pillar-v7',
+        default='point-gremlin-v1',
         help='environment to train on (default: point-pillar-v1)')
     parser.add_argument(
         '--log-dir',
@@ -124,7 +124,7 @@ def get_args():
     parser.add_argument(
         '--recurrent-policy',
         action='store_true',
-        default=False,
+        default=True,
         help='use a recurrent policy')
     parser.add_argument(
         '--use-linear-lr-decay',
