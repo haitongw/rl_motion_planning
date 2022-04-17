@@ -1,3 +1,4 @@
+from turtle import distance
 from safety_gym.envs.engine import Engine
 # from gym.utils.env_checker import check_env
 from gym.spaces import Box, Discrete
@@ -66,11 +67,14 @@ class CustomEngine(Engine):
             self.obs_space_dict['pillar_radius'] = Box(0.0, 2.0, (1,), dtype=np.float32)
         if self.observe_pillar_compass:
             self.obs_space_dict['pillar_compass'] = Box(-np.inf, np.inf, (self.pillars_num,2), dtype=np.float32)
+        if self.observe_pillar_dist:
+            self.obs_space_dict['pillar_dist'] = Box(0.0, 1.0, (self.pillars_num,), np.float32)
         if self.padding_obs:
             self.obs_space_dict['robot_vel'] = Box(-np.inf, np.inf, (1,), dtype=np.float32)
             # self.obs_space_dict['robot_radius'] = Box(0.0, 1.0, (1,), np.float32)
             # self.obs_space_dict['pillar_radius'] = Box(0.0, 2.0, (1,), dtype=np.float32)
             self.obs_space_dict['pillar_compass'] = Box(-np.inf, np.inf, (3,2), dtype=np.float32)
+            self.obs_space_dict['pillar_dist'] = Box(0.0, 1.0, (3,), np.float32)
         if self.observation_flatten:
             self.obs_flat_size = sum([np.prod(i.shape) for i in self.obs_space_dict.values()])
             self.observation_space = Box(-np.inf, np.inf, (self.obs_flat_size,), dtype=np.float32)
@@ -99,8 +103,8 @@ class CustomEngine(Engine):
         if self.observe_goal_dist:
             obs['goal_dist'] = np.array([np.exp(-self.dist_goal())])
         if self.observe_goal_comp:
-            # obs['goal_compass'] = self.obs_compass(self.goal_pos)
-            obs['goal_compass'] = self.obs_compass_without_norm(self.goal_pos)
+            obs['goal_compass'] = self.obs_compass(self.goal_pos)
+            # obs['goal_compass'] = self.obs_compass_without_norm(self.goal_pos)
         if self.observe_robot_pos:
             obs['robot_pos'] = self.robot_pos[:2]
         if self.observe_robot_vel:
@@ -116,11 +120,18 @@ class CustomEngine(Engine):
         if self.observe_pillar_radius:
             obs['pillar_radius'] = np.array([self.pillars_size])
         if self.observe_pillar_compass:
-            obs['pillar_compass'] = np.array(list(map(self.obs_compass_without_norm, self.pillars_pos)))
+            # obs['pillar_compass'] = np.array(list(map(self.obs_compass_without_norm, self.pillars_pos)))
+            obs['pillar_compass'] = np.array(list(map(self.obs_compass, self.pillars_pos)))
+        if self.observe_pillar_dist:
+            pillar_position = np.array(self.pillars_pos)[:,:2]
+            distance_array = np.hypot(self.robot_pos[:2][0] - pillar_position[:,0],
+                                      self.robot_pos[:2][1] - pillar_position[:,1])
+            obs['pillar_dist'] = np.exp(-(distance_array-0.38))
         if self.padding_obs:
             obs['robot_vel'] = np.array([np.hypot(*self.world.robot_vel()[:2])])
             # obs['robot_radius'] = np.array([self.robot_radius]) # robot radius
             obs['pillar_compass'] = np.zeros((3,2))
+            obs['pillar_dist'] = np.zeros((3))
             # obs['pillar_radius'] = np.array([self.pillars_size])
         if self.observation_flatten:
             flat_obs = np.zeros(self.obs_flat_size)
@@ -166,18 +177,37 @@ class CustomEngine(Engine):
             pillar_position = np.array(self.pillars_pos)[:,:2]
             distance_array = np.hypot(self.robot_pos[:2][0] - pillar_position[:,0],
                                       self.robot_pos[:2][1] - pillar_position[:,1])
-            min_dist = np.min(distance_array)
+            # min_dist = np.min(distance_array)
 
             # collision
-            collision_dist = min_dist - (self.robot_radius + self.pillars_size)
-            if collision_dist < 0:
-                reward += -0.25
+            collision_dist = distance_array - (self.robot_radius + self.pillars_size)
+            min_collision_dist = np.min(collision_dist)
+            # collision_dist = min_dist - (self.robot_radius + self.pillars_size)
+            if min_collision_dist < 0:
+                reward += -self.collision_penalty
                 info['collsion'] = 1
                 # print("collision")
-            elif collision_dist < 0.2:
-                reward += float(-0.05 + 0.25 * collision_dist)
-                info['too_close'] = 1
-                # print("too close to pillar")
+            # too close to obstacles    
+            close_penalty = 0.0
+            for dist in collision_dist:
+                if dist < self.too_close_dist and dist > 0:
+                    info['too_close'] = 1
+                    if self.nonlinear_penalty:
+                        close_penalty += -self.collision_penalty * np.exp(-dist)
+                    else:
+                        close_penalty += float(-self.too_close_penalty + self.too_close_penalty/self.too_close_dist * collision_dist)
+            
+            reward += close_penalty
+
+            # elif collision_dist < self.too_close_dist:
+            #     if self.nonlinear_penalty:
+            #         penalty = -self.collision_penalty * np.exp(-collision_dist)
+            #     else:
+            #         penalty = float(-self.too_close_penalty + self.too_close_penalty/self.too_close_dist * collision_dist)
+            #     reward += penalty
+            #     # print("%.4f" % float(-self.too_close_penalty + self.too_close_penalty/self.too_close_dist * collision_dist))
+            #     info['too_close'] = 1
+            #     # print("too close to pillar")
 
         if self.observation_flatten:
             obs = obs_flat
@@ -201,16 +231,16 @@ if __name__ == '__main__':
     config = {
         'play': True,   # control robot from keyboard, Up, Down, Left, Right
         'robot_base': 'xmls/new_point.xml',  # Which robot XML to use as the base
-        'num_steps':40000000,
+        'num_steps':4000000,
         'task': 'goal',
-        'observation_flatten': False,
+        'observation_flatten': True,
         'observe_goal_comp': True,
-        'observe_goal_dist': False,  # 0->1 distance closer to the goal, value closer to 1
+        'observe_goal_dist': True,  # 0->1 distance closer to the goal, value closer to 1
         'pillars_num': 3,
         'sensors_obs': [],
         'constrain_pillars': True,
         'reward_distance': 1.0,   # dense reward
-        'reward_goal': 10.0,       # sparse reward
+        'reward_goal': 20.0,       # sparse reward
         'custom_observation': { 'padding_obs':False,
                                 'observe_robot_vel': True,
                                 'observe_robot_pos': False,
@@ -220,8 +250,14 @@ if __name__ == '__main__':
                                 'observe_pillar_pos': False,
                                 'observe_pillar_radius': False,
                                 'observe_pillar_compass': True,
+                                'observe_pillar_dist': True,
+                                'collision_penalty': 0.25,
+                                'too_close_penalty': 0.1,
+                                'too_close_dist': 0.8,
+                                'nonlinear_penalty': True,
                                 }
     }
+
     myenv = CustomEngine(config)
     myenv.seed(42)
     act = 0
@@ -239,9 +275,10 @@ if __name__ == '__main__':
             cnt+=1
             if cnt >= 100:
                 cnt = 0
-                print(state)
+                # print(state)
                 # print("%.3f" % total_reward)
-                print('----------------------')
+                print("%.4f" % reward)
+                # print('----------------------')
 
         act+=1
         obs = myenv.reset()

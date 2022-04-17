@@ -9,11 +9,11 @@ args = get_args()
 
 device = torch.device("cuda:0" if args.cuda else "cpu")
 print(device)
-env = gym.make("point-pillar-v3")
+env = gym.make("point-pillar-v6")
 env.seed(42)
 np.random.seed(42)
 # save_dir = "./trained_models/a2c/point-pillar-v1.pt"
-save_dir = "./trained_models/a2c/point-pillar-v3-net-cont-act.pt"
+save_dir = "./trained_models/a2c/point-pillar-v6-net-cont-act-dist-best.pt"
 
 actor_critic, _ = torch.load(save_dir)
 actor_critic = actor_critic.float()

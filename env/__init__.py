@@ -237,3 +237,141 @@ register(id='point-pillar-v3',
         entry_point='env.custom_env:CustomEngine',
         kwargs={'config':config7})
 # collision penalty: 0.1, 0.01
+
+
+# normalize compass for goal and pillars
+# observe normalized pillar dist
+# observation shape (13,)
+config8 = {
+    'play': False,   # control robot from keyboard, Up, Down, Left, Right
+    'robot_base': 'xmls/new_point.xml',  # Which robot XML to use as the base
+    'num_steps':4000,
+    'task': 'goal',
+    'observation_flatten': True,
+    'observe_goal_comp': True,
+    'observe_goal_dist': True,  # 0->1 distance closer to the goal, value closer to 1
+    'pillars_num': 3,
+    'sensors_obs': [],
+    'constrain_pillars': True,
+    'reward_distance': 1.0,   # dense reward
+    'reward_goal': 30.0,       # sparse reward
+    'custom_observation': { 'padding_obs':False,
+                            'observe_robot_vel': True,
+                            'observe_robot_pos': False,
+                            'observe_robot_yaw': False,
+                            'observe_v_pref': False,
+                            'observe_robot_radius': False,
+                            'observe_pillar_pos': False,
+                            'observe_pillar_radius': False,
+                            'observe_pillar_compass': True,
+                            'observe_pillar_dist': True,
+                            'collision_penalty': 0.25,
+                            'too_close_penalty': 0.1,
+                            'too_close_dist': 0.8,
+                            }
+}
+register(id='point-pillar-v4',
+        entry_point='env.custom_env:CustomEngine',
+        kwargs={'config':config8})
+# 0.25, 0.05, 0.2 collision cost works well
+
+config9 = {
+    'play': False,   # control robot from keyboard, Up, Down, Left, Right
+    'robot_base': 'xmls/new_point.xml',  # Which robot XML to use as the base
+    'num_steps':4000,
+    'task': 'goal',
+    'observation_flatten': True,
+    'observe_goal_comp': True,
+    'observe_goal_dist': True,  # 0->1 distance closer to the goal, value closer to 1
+    'pillars_num': 5,
+    'sensors_obs': [],
+    'constrain_pillars': True,
+    'reward_distance': 1.0,   # dense reward
+    'reward_goal': 30.0,       # sparse reward
+    'custom_observation': { 'padding_obs':False,
+                            'observe_robot_vel': True,
+                            'observe_robot_pos': False,
+                            'observe_robot_yaw': False,
+                            'observe_v_pref': False,
+                            'observe_robot_radius': False,
+                            'observe_pillar_pos': False,
+                            'observe_pillar_radius': False,
+                            'observe_pillar_compass': True,
+                            'observe_pillar_dist': True,
+                            'collision_penalty': 0.25,
+                            'too_close_penalty': 0.01,
+                            'too_close_dist': 0.5,
+                            }
+}
+register(id='point-pillar-v5',
+        entry_point='env.custom_env:CustomEngine',
+        kwargs={'config':config9})
+
+
+# exponential penalty for getting too close to obstacle
+config10 = {
+    'play': False,   # control robot from keyboard, Up, Down, Left, Right
+    'robot_base': 'xmls/new_point.xml',  # Which robot XML to use as the base
+    'num_steps':4000,
+    'task': 'goal',
+    'observation_flatten': True,
+    'observe_goal_comp': True,
+    'observe_goal_dist': True,  # 0->1 distance closer to the goal, value closer to 1
+    'pillars_num': 3,
+    'sensors_obs': [],
+    'constrain_pillars': True,
+    'reward_distance': 1.0,   # dense reward
+    'reward_goal': 30.0,       # sparse reward
+    'custom_observation': { 'padding_obs':False,
+                            'observe_robot_vel': True,
+                            'observe_robot_pos': False,
+                            'observe_robot_yaw': False,
+                            'observe_v_pref': False,
+                            'observe_robot_radius': False,
+                            'observe_pillar_pos': False,
+                            'observe_pillar_radius': False,
+                            'observe_pillar_compass': True,
+                            'observe_pillar_dist': True,
+                            'collision_penalty': 0.2,
+                            'too_close_penalty': 0.1,
+                            'too_close_dist': 0.6,
+                            'nonlinear_penalty': True,
+                            }
+}
+register(id='point-pillar-v6',
+        entry_point='env.custom_env:CustomEngine',
+        kwargs={'config':config10})
+
+# exponential penalty for getting too close to obstacle
+config11 = {
+    'play': False,   # control robot from keyboard, Up, Down, Left, Right
+    'robot_base': 'xmls/new_point.xml',  # Which robot XML to use as the base
+    'num_steps':4000,
+    'task': 'goal',
+    'observation_flatten': True,
+    'observe_goal_comp': True,
+    'observe_goal_dist': True,  # 0->1 distance closer to the goal, value closer to 1
+    'pillars_num': 5,
+    'sensors_obs': [],
+    'constrain_pillars': True,
+    'reward_distance': 5.0,   # dense reward
+    'reward_goal': 20.0,       # sparse reward
+    'custom_observation': { 'padding_obs':False,
+                            'observe_robot_vel': True,
+                            'observe_robot_pos': False,
+                            'observe_robot_yaw': False,
+                            'observe_v_pref': False,
+                            'observe_robot_radius': False,
+                            'observe_pillar_pos': False,
+                            'observe_pillar_radius': False,
+                            'observe_pillar_compass': True,
+                            'observe_pillar_dist': True,
+                            'collision_penalty': 0.15,
+                            'too_close_penalty': 0.1,
+                            'too_close_dist': 0.5,
+                            'nonlinear_penalty': True,
+                            }
+}
+register(id='point-pillar-v7',
+        entry_point='env.custom_env:CustomEngine',
+        kwargs={'config':config11})
