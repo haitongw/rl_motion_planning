@@ -8,7 +8,7 @@ def get_args():
     parser.add_argument(
         '--algo', default='a2c', help='algorithm to use: a2c | ppo | acktr')
     parser.add_argument(
-        '--lr', type=float, default=1e-3, help='learning rate (default: 7e-4)')
+        '--lr', type=float, default=5e-4, help='learning rate (default: 7e-4)')
     parser.add_argument(
         '--model',
         default=None,
@@ -63,7 +63,7 @@ def get_args():
     parser.add_argument(
         '--num-processes',
         type=int,
-        default=6,
+        default=16,
         help='how many training CPU processes to use (default: 6)')
     parser.add_argument(
         '--num-steps',
@@ -101,7 +101,7 @@ def get_args():
         help='number of environment steps to train (default: 10e6)')
     parser.add_argument(
         '--env-name',
-        default='point-pillar-v1',
+        default='point-pillar-v3',
         help='environment to train on (default: point-pillar-v1)')
     parser.add_argument(
         '--log-dir',

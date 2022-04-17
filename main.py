@@ -1,5 +1,4 @@
 import copy
-import glob
 import os
 import time
 from collections import deque
@@ -46,6 +45,7 @@ def main():
                          args.gamma, args.log_dir, device, False)
 
     if args.model is not None:
+        print("load model: ",args.model)
         model_dir = "./trained_models/a2c/" + args.model
         actor_critic, _ = torch.load(model_dir)
     else:
@@ -75,6 +75,8 @@ def main():
     rollouts.to(device)
 
     episode_rewards = deque(maxlen=10)
+
+    best_mean_reward = -np.inf
 
     start = time.time()
     num_updates = int(args.num_env_steps) // args.num_steps // args.num_processes
@@ -131,11 +133,14 @@ def main():
                 os.makedirs(save_path)
             except OSError:
                 pass
+            
+            if len(episode_rewards)>1 and np.mean(episode_rewards) > best_mean_reward:
+                torch.save([
+                    actor_critic,
+                    getattr(utils.get_vec_normalize(envs), 'obs_rms', None)
+                ], os.path.join(save_path, args.env_name + "-net-cont-act-penalty.pt"))
 
-            torch.save([
-                actor_critic,
-                getattr(utils.get_vec_normalize(envs), 'obs_rms', None)
-            ], os.path.join(save_path, args.env_name + ".pt"))
+                best_mean_reward = np.mean(episode_rewards)
 
         if j % args.log_interval == 0 and len(episode_rewards) > 1:
             total_num_steps = (j + 1) * args.num_processes * args.num_steps

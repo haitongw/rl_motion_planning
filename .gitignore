@@ -17,3 +17,4 @@ data/
 .vscode
 test.py
 log/
+trained_models/
