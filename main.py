@@ -53,7 +53,7 @@ def main():
         actor_critic = Policy(
             envs.observation_space.shape,
             envs.action_space,
-            base_kwargs={'recurrent': args.recurrent_policy,'hidden_size': 128,'device':device})
+            base_kwargs={'recurrent': args.recurrent_policy,'hidden_size': 256,'device':device})
     actor_critic.to(device)
 
     # neural nets update
@@ -138,14 +138,14 @@ def main():
                 torch.save([
                     actor_critic,
                     getattr(utils.get_vec_normalize(envs), 'obs_rms', None)
-                ], os.path.join(save_path, args.env_name + "-net-gru-128-best.pt"))
+                ], os.path.join(save_path, args.env_name + "-net-gru-best.pt"))
 
                 best_mean_reward = np.mean(episode_rewards)
 
             torch.save([
                 actor_critic,
                 getattr(utils.get_vec_normalize(envs), 'obs_rms', None)
-            ], os.path.join(save_path, args.env_name + "-net-gru-128-latest.pt"))
+            ], os.path.join(save_path, args.env_name + "-net-gru-latest.pt"))
 
         if j % args.log_interval == 0 and len(episode_rewards) > 1:
             total_num_steps = (j + 1) * args.num_processes * args.num_steps

@@ -159,7 +159,7 @@ class CustomEngine(Engine):
         control gremlins
         """
         if self.gremlins_num: # self.constrain_gremlins:
-            phase = float(self.data.time)/6.0
+            phase = float(self.data.time)/2.0   #6.0
             for i in range(self.gremlins_num):
                 name = f'gremlin{i}'
                 target = np.array([np.sin(phase), np.cos(phase)]) * self.gremlins_travel
@@ -272,24 +272,27 @@ class CustomEngine(Engine):
 
 if __name__ == '__main__':
     config = {
-        'play': True,   # control robot from keyboard, Up, Down, Left, Right
+        'play': False,   # control robot from keyboard, Up, Down, Left, Right
         'robot_base': 'xmls/new_point.xml',  # Which robot XML to use as the base
+        'placements_extents': [-2., -2., 2., 2.],  # Placement limits (min X, min Y, max X, max Y)
         'num_steps':1000,
         'task': 'goal',
         'observation_flatten': True,
         'observe_goal_comp': True,
         'observe_goal_dist': True,  # 0->1 distance closer to the goal, value closer to 1
         'pillars_num': 0,
-        'gremlins_num': 5,
+        'gremlins_num': 8,
         'sensors_obs': [],
         'constrain_pillars': False,
         'constrain_gremlins': True,
         'gremlins_keepout': 0.5,  # Radius for keeping out (contains gremlin path)
-        'gremlins_travel': 1.2,  # Radius of the circle traveled in
+        'gremlins_travel': 0.8,  # Radius of the circle traveled in
         'gremlins_size': 0.1,  # Half-size (radius) of gremlin objects
         'gremlins_density': 0.001,  # Density of gremlins
         'reward_distance': 1.0,   # dense reward
         'reward_goal': 30.0,       # sparse reward
+        # 'goal_placements': [(-1.5, -1.5, 1.5, 1.5)],
+        'gremlins_placements': [(-2.5,-2.5,2.5,2.5)],
         'custom_observation': { 'padding_obs':False,
                                 'observe_robot_vel': True,
                                 'observe_robot_pos': False,
@@ -303,9 +306,9 @@ if __name__ == '__main__':
                                 'observe_gremlin_vel': True,
                                 'observe_gremlin_compass': True,
                                 'observe_gremlin_dist': True,
-                                'collision_penalty': 0.2,
+                                'collision_penalty': 0.1,
                                 'too_close_penalty': 0.1,
-                                'too_close_dist': 0.6,
+                                'too_close_dist': 0.4,
                                 'nonlinear_penalty': True,
                                 }
     }
