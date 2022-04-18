@@ -50,18 +50,25 @@ import glob
 import numpy as np
 import matplotlib.pyplot as plt
 
-log_dir = "./log/*.csv"
-dataframe_list = []
+# log_dir = "./log/*.csv"
+# dataframe_list = []
 
-for name in glob.glob(log_dir):
-    dataframe_list.append(pd.read_csv(name))
+# for name in glob.glob(log_dir):
+#     dataframe_list.append(pd.read_csv(name))
 
-num_processes = len(dataframe_list)
-num_episode = len(dataframe_list[0].r)
-return_arr = np.zeros((num_processes,num_episode))
+# num_processes = len(dataframe_list)
+# num_episode = len(dataframe_list[0].r)
+# return_arr = np.zeros((num_processes,num_episode))
 
-for idx, df in enumerate(dataframe_list):
-    return_arr[idx,:] = np.array(df.r)
+# for idx, df in enumerate(dataframe_list):
+#     return_arr[idx,:] = np.array(df.r)
 
-plt.plot(np.arange(1,num_episode+1), np.mean(return_arr, axis=0))
+# plt.plot(np.arange(1,num_episode+1), np.mean(return_arr, axis=0))
+# plt.show()
+log_dir  = "./return_log/point-gremlin-v2-eval.csv"
+
+arr = np.genfromtxt(log_dir)
+plt.plot(arr)
 plt.show()
+# df = pd.read_csv(log_dir)
+# print(df)

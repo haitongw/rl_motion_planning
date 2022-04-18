@@ -88,7 +88,7 @@ def get_args():
     parser.add_argument(
         '--eval-interval',
         type=int,
-        default=None,
+        default=1000,
         help='eval interval, one eval per n updates (default: None)')
     parser.add_argument(
         '--render-interval',
@@ -101,7 +101,7 @@ def get_args():
         help='number of environment steps to train (default: 10e6)')
     parser.add_argument(
         '--env-name',
-        default='point-gremlin-v2',
+        default='point-pillar-gru-v0',
         help='environment to train on (default: point-pillar-v1)')
     parser.add_argument(
         '--log-dir',

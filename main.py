@@ -2,6 +2,7 @@ import copy
 import os
 import time
 from collections import deque
+import csv
 
 import gym
 import safety_gym
@@ -19,7 +20,7 @@ from arguments import get_args
 from envs import make_vec_envs
 from model import Policy
 from storage import RolloutStorage
-from evaluation import evaluate
+# from evaluation import evaluate
 
 def main():
     args = get_args()
@@ -77,6 +78,8 @@ def main():
     episode_rewards = deque(maxlen=10)
 
     best_mean_reward = -np.inf
+    return_storage = np.zeros(args.num_processes)
+    return_storeage_cnt = 0
 
     start = time.time()
     num_updates = int(args.num_env_steps) // args.num_steps // args.num_processes
@@ -98,6 +101,16 @@ def main():
 
             # Obser reward and next obs
             obs, reward, done, infos = envs.step(action)
+            return_storage += np.squeeze(reward.numpy())
+            return_storeage_cnt += 1
+            if return_storeage_cnt >= args.eval_interval:
+                print(f"average return {return_storage}")
+                log_dir = "./return_log/" + args.env_name + "-eval.csv"
+                with open(log_dir,'a') as f:
+                    writer = csv.writer(f)
+                    writer.writerow([np.mean(return_storage)])
+                return_storage = np.zeros(args.num_processes)
+                return_storeage_cnt = 0
 
             for info in infos:
                 if 'episode' in info.keys():

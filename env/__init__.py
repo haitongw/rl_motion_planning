@@ -473,7 +473,7 @@ config14 = {
     'play': False,   # control robot from keyboard, Up, Down, Left, Right
     'robot_base': 'xmls/new_point.xml',  # Which robot XML to use as the base
     # 'placements_extents': [-1.5, -1.5, 1.5, 1.5],  # Placement limits (min X, min Y, max X, max Y)
-    'num_steps':4000,   # 4000
+    'num_steps':2000,   # 4000
     'task': 'goal',
     'observation_flatten': True,
     'observe_goal_comp': True,
@@ -566,13 +566,13 @@ config16 = {
     'placements_extents': [-2., -2., 2., 2.],  # Placement limits (min X, min Y, max X, max Y)
     'num_steps':4000,
     'task': 'goal',
-    'observation_flatten': False,
+    'observation_flatten': True,
     'observe_goal_comp': True,
     'observe_goal_dist': True,  # 0->1 distance closer to the goal, value closer to 1
     'pillars_num': 3,
     'gremlins_num': 0,
     'sensors_obs': [],
-    'constrain_pillars': False,
+    'constrain_pillars': True,
     'constrain_gremlins': False,
     'gremlins_keepout': 0.5,  # Radius for keeping out (contains gremlin path)
     'gremlins_travel': 0.8,  # Radius of the circle traveled in

@@ -294,13 +294,13 @@ if __name__ == '__main__':
         'placements_extents': [-2., -2., 2., 2.],  # Placement limits (min X, min Y, max X, max Y)
         'num_steps':100000000,
         'task': 'goal',
-        'observation_flatten': False,
+        'observation_flatten': True,
         'observe_goal_comp': True,
         'observe_goal_dist': True,  # 0->1 distance closer to the goal, value closer to 1
         'pillars_num': 3,
         'gremlins_num': 0,
         'sensors_obs': [],
-        'constrain_pillars': False,
+        'constrain_pillars': True,
         'constrain_gremlins': False,
         'gremlins_keepout': 0.5,  # Radius for keeping out (contains gremlin path)
         'gremlins_travel': 0.8,  # Radius of the circle traveled in
@@ -335,6 +335,7 @@ if __name__ == '__main__':
     act = 0
     cnt = 0
     myenv.reset()
+    print(myenv.observation_space.shape)
     done = False
     for i in range(12):
         total_reward = 0
@@ -347,10 +348,10 @@ if __name__ == '__main__':
             cnt+=1
             if cnt >= 100:
                 cnt = 0
-                print(state)
+                # print(state)
                 # print("%.3f" % total_reward)
                 # print("%.4f" % reward)
-                print('----------------------')
+                # print('----------------------')
 
         act+=1
         obs = myenv.reset()
