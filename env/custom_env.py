@@ -39,14 +39,19 @@ class CustomEngine(Engine):
             self.obs_space_dict['v_pref'] = Box(0.0, 1.0, (1,), dtype=np.float32)
         if self.observe_robot_radius:
             self.obs_space_dict['robot_radius'] = Box(0.0, 1.0, (1,), np.float32)
-        if self.observe_pillar_pos:
-            self.obs_space_dict['pillar_pos'] = Box(-np.inf, np.inf, (self.pillars_num,2), dtype=np.float32)
-        if self.observe_pillar_radius:
-            self.obs_space_dict['pillar_radius'] = Box(0.0, 2.0, (1,), dtype=np.float32)
-        if self.observe_pillar_compass:
-            self.obs_space_dict['pillar_compass'] = Box(-np.inf, np.inf, (self.pillars_num,2), dtype=np.float32)
-        if self.observe_pillar_dist:
-            self.obs_space_dict['pillar_dist'] = Box(0.0, 1.0, (self.pillars_num,), np.float32)
+        if self.pillars_num > 0:
+            feature_num = 1 # velocity
+            # if self.observe_pillar_pos:
+            #     self.obs_space_dict['pillar_pos'] = Box(-np.inf, np.inf, (self.pillars_num,2), dtype=np.float32)
+            # if self.observe_pillar_radius:
+            #     self.obs_space_dict['pillar_radius'] = Box(0.0, 2.0, (1,), dtype=np.float32)
+            if self.observe_pillar_compass:
+                feature_num += 2
+                # self.obs_space_dict['pillar_compass'] = Box(-np.inf, np.inf, (self.pillars_num,2), dtype=np.float32)
+            if self.observe_pillar_dist:
+                feature_num += 1
+                # self.obs_space_dict['pillar_dist'] = Box(0.0, 1.0, (self.pillars_num,), np.float32)
+            self.obs_space_dict['y_pillar_state'] = Box(-np.inf, np.inf, (self.pillars_num, feature_num), np.float32)
         if self.gremlins_num > 0:
             feature_num = 0
             if self.observe_gremlin_compass:
@@ -105,20 +110,32 @@ class CustomEngine(Engine):
             obs['robot_yaw'] = np.array([mat2yaw(self.world.robot_mat())])
         if self.observe_v_pref:
             obs['v_pref'] = self.v_pref * 10    #TODO: fix this
-        if self.observe_robot_radius:
-            obs['robot_radius'] = np.array([self.robot_radius]) # robot radius
-        if self.observe_pillar_pos:
-            obs['pillar_pos'] = np.array(self.pillars_pos)[:,:2]
-        if self.observe_pillar_radius:
-            obs['pillar_radius'] = np.array([self.pillars_size])
-        if self.observe_pillar_compass:
-            # obs['pillar_compass'] = np.array(list(map(self.obs_compass_without_norm, self.pillars_pos)))
-            obs['pillar_compass'] = np.array(list(map(self.obs_compass, self.pillars_pos)))
-        if self.observe_pillar_dist:
-            pillar_position = np.array(self.pillars_pos)[:,:2]
-            distance_array = np.hypot(self.robot_pos[:2][0] - pillar_position[:,0],
-                                      self.robot_pos[:2][1] - pillar_position[:,1])
-            obs['pillar_dist'] = np.exp(-(distance_array-0.38))
+        # if self.observe_robot_radius:
+        #     obs['robot_radius'] = np.array([self.robot_radius]) # robot radius
+        # if self.observe_pillar_pos:
+        #     obs['pillar_pos'] = np.array(self.pillars_pos)[:,:2]
+        # if self.observe_pillar_radius:
+        #     obs['pillar_radius'] = np.array([self.pillars_size])
+        # if self.observe_pillar_compass:
+        #     # obs['pillar_compass'] = np.array(list(map(self.obs_compass_without_norm, self.pillars_pos)))
+        #     obs['pillar_compass'] = np.array(list(map(self.obs_compass, self.pillars_pos)))
+        # if self.observe_pillar_dist:
+        #     pillar_position = np.array(self.pillars_pos)[:,:2]
+        #     distance_array = np.hypot(self.robot_pos[:2][0] - pillar_position[:,0],
+        #                               self.robot_pos[:2][1] - pillar_position[:,1])
+        #     obs['pillar_dist'] = np.exp(-(distance_array-0.38))
+        if self.pillars_num > 0:
+            obs['y_pillar_state'] = np.zeros((self.pillars_num, 4))
+            if self.observe_pillar_compass:
+                pillar_compass = np.array(list(map(self.obs_compass, self.pillars_pos)))
+                obs['y_pillar_state'][:,:2] = pillar_compass
+            if self.observe_pillar_dist:
+                pillar_position = np.array(self.pillars_pos)[:,:2]
+                distance_array = np.hypot(self.robot_pos[:2][0] - pillar_position[:,0],
+                                        self.robot_pos[:2][1] - pillar_position[:,1])
+                obs['y_pillar_state'][:,2] = np.exp(-(distance_array-0.38))
+            order_idx = np.argsort(obs['y_pillar_state'][:,2])
+            obs['y_pillar_state'] = obs['y_pillar_state'][order_idx]
         if self.gremlins_num > 0:
             obs['z_gremlin_state'] = np.zeros((self.gremlins_num, 4))
             if self.observe_gremlin_compass:
@@ -272,19 +289,19 @@ class CustomEngine(Engine):
 
 if __name__ == '__main__':
     config = {
-        'play': False,   # control robot from keyboard, Up, Down, Left, Right
+        'play': True,   # control robot from keyboard, Up, Down, Left, Right
         'robot_base': 'xmls/new_point.xml',  # Which robot XML to use as the base
         'placements_extents': [-2., -2., 2., 2.],  # Placement limits (min X, min Y, max X, max Y)
-        'num_steps':1000,
+        'num_steps':100000000,
         'task': 'goal',
-        'observation_flatten': True,
+        'observation_flatten': False,
         'observe_goal_comp': True,
         'observe_goal_dist': True,  # 0->1 distance closer to the goal, value closer to 1
-        'pillars_num': 0,
-        'gremlins_num': 8,
+        'pillars_num': 3,
+        'gremlins_num': 0,
         'sensors_obs': [],
         'constrain_pillars': False,
-        'constrain_gremlins': True,
+        'constrain_gremlins': False,
         'gremlins_keepout': 0.5,  # Radius for keeping out (contains gremlin path)
         'gremlins_travel': 0.8,  # Radius of the circle traveled in
         'gremlins_size': 0.1,  # Half-size (radius) of gremlin objects
@@ -301,11 +318,11 @@ if __name__ == '__main__':
                                 'observe_robot_radius': False,
                                 'observe_pillar_pos': False,
                                 'observe_pillar_radius': False,
-                                'observe_pillar_compass': False,
-                                'observe_pillar_dist': False,
-                                'observe_gremlin_vel': True,
-                                'observe_gremlin_compass': True,
-                                'observe_gremlin_dist': True,
+                                'observe_pillar_compass': True,
+                                'observe_pillar_dist': True,
+                                'observe_gremlin_vel': False,
+                                'observe_gremlin_compass': False,
+                                'observe_gremlin_dist': False,
                                 'collision_penalty': 0.1,
                                 'too_close_penalty': 0.1,
                                 'too_close_dist': 0.4,

@@ -138,14 +138,14 @@ def main():
                 torch.save([
                     actor_critic,
                     getattr(utils.get_vec_normalize(envs), 'obs_rms', None)
-                ], os.path.join(save_path, args.env_name + "-net-gru-best.pt"))
+                ], os.path.join(save_path, args.env_name + "-net-gru-eval-best.pt"))
 
                 best_mean_reward = np.mean(episode_rewards)
 
             torch.save([
                 actor_critic,
                 getattr(utils.get_vec_normalize(envs), 'obs_rms', None)
-            ], os.path.join(save_path, args.env_name + "-net-gru-latest.pt"))
+            ], os.path.join(save_path, args.env_name + "-net-gru-eval-latest.pt"))
 
         if j % args.log_interval == 0 and len(episode_rewards) > 1:
             total_num_steps = (j + 1) * args.num_processes * args.num_steps
@@ -159,24 +159,12 @@ def main():
                         np.max(episode_rewards), dist_entropy, value_loss,
                         action_loss))
 
-        if (args.eval_interval is not None and len(episode_rewards) > 1
-                and j % args.eval_interval == 0):
-            obs_rms = utils.get_vec_normalize(envs).obs_rms
-            evaluate(actor_critic, obs_rms, args.env_name, args.seed,
-                     args.num_processes, eval_log_dir, device)
+        # if (args.eval_interval is not None and len(episode_rewards) > 1
+        #         and j % args.eval_interval == 0):
+        #     obs_rms = utils.get_vec_normalize(envs).obs_rms
+        #     evaluate(actor_critic, obs_rms, args.env_name, args.seed,
+        #              args.num_processes, eval_log_dir, device)
 
-        # if (args.render_interval > 0) and (j % args.render_interval == 0):
-        #     demo_env = gym.make(args.env_name)
-        #     demo_obs = demo_env.reset()
-        #     while True:
-        #         demo_env.render()
-        #         demo_obs_tensor = torch.from_numpy(demo_obs).float().to(device)
-        #         _, demo_action, _, __ = actor_critic.act(demo_obs_tensor, None, None)
-        #         # act = int(np.squeeze(action.cpu().detach().numpy()))
-        #         demo_obs, demo_reward, demo_done, demo_info = demo_env.step(demo_action.cpu().detach().numpy())
-        #         if demo_done:
-        #             break
-        #     demo_env.close()
 
 if __name__ == "__main__":
     main()
