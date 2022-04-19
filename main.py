@@ -104,7 +104,7 @@ def main():
             return_storage += np.squeeze(reward.numpy())
             return_storeage_cnt += 1
             if return_storeage_cnt >= args.eval_interval:
-                print(f"average return {return_storage}")
+                # print(f"average return {return_storage}")
                 log_dir = "./return_log/" + args.env_name + "-eval.csv"
                 with open(log_dir,'a') as f:
                     writer = csv.writer(f)

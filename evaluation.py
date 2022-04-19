@@ -1,74 +1,42 @@
-# import numpy as np
-# import torch
-
-# import utils
-# from envs import make_vec_envs
-
-# def evaluate(actor_critic, obs_rms, env_name, seed, num_processes, eval_log_dir,
-#              device):
-#     eval_envs = make_vec_envs(env_name, seed + num_processes, num_processes,
-#                               None, eval_log_dir, device, True)
-
-#     vec_norm = utils.get_vec_normalize(eval_envs)
-#     if vec_norm is not None:
-#         vec_norm.eval()
-#         vec_norm.obs_rms = obs_rms
-
-#     eval_episode_rewards = []
-
-#     obs = eval_envs.reset()
-#     eval_recurrent_hidden_states = torch.zeros(
-#         num_processes, actor_critic.recurrent_hidden_state_size, device=device)
-#     eval_masks = torch.zeros(num_processes, 1, device=device)
-
-#     while len(eval_episode_rewards) < 10:
-#         with torch.no_grad():
-#             _, action, _, eval_recurrent_hidden_states = actor_critic.act(
-#                 obs,
-#                 eval_recurrent_hidden_states,
-#                 eval_masks,
-#                 deterministic=True)
-
-#         # Obser reward and next obs
-#         obs, _, done, infos = eval_envs.step(action)
-
-#         eval_masks = torch.tensor(
-#             [[0.0] if done_ else [1.0] for done_ in done],
-#             dtype=torch.float32,
-#             device=device)
-
-#         for info in infos:
-#             if 'episode' in info.keys():
-#                 eval_episode_rewards.append(info['episode']['r'])
-
-#     eval_envs.close()
-
-#     print(" Evaluation using {} episodes: mean reward {:.5f}\n".format(
-#         len(eval_episode_rewards), np.mean(eval_episode_rewards)))
+from cProfile import label
 import pandas as pd
 import glob
 import numpy as np
 import matplotlib.pyplot as plt
 
-# log_dir = "./log/*.csv"
-# dataframe_list = []
+# # 4 gremlins
+# gremlin_4_log_dir  = "./return_log/point-gremlin-v3-eval.csv"
+# # 8 gremlins
+# gremlin_8_log_dir = "./return_log/point-gremlin-v2-eval.csv"
+# # 12 gremlins
+# gremlin_12_log_dir = "./return_log/point-gremlin-v4-eval.csv"
 
-# for name in glob.glob(log_dir):
-#     dataframe_list.append(pd.read_csv(name))
+# gremlin_4 = np.genfromtxt(gremlin_4_log_dir)
+# gremlin_8 = np.genfromtxt(gremlin_8_log_dir)
+# gremlin_12 = np.genfromtxt(gremlin_12_log_dir)
 
-# num_processes = len(dataframe_list)
-# num_episode = len(dataframe_list[0].r)
-# return_arr = np.zeros((num_processes,num_episode))
-
-# for idx, df in enumerate(dataframe_list):
-#     return_arr[idx,:] = np.array(df.r)
-
-# plt.plot(np.arange(1,num_episode+1), np.mean(return_arr, axis=0))
+# # print(arr_4[0])
+# plt.plot(5000*np.arange(1,36), gremlin_4[:35], label='num_obstacle: 4')
+# plt.plot(5000*np.arange(1,36), gremlin_8[:35], label='num_obstacle: 8')
+# plt.plot(5000*np.arange(1,36), gremlin_12, label='num_obstacle: 12')
+# plt.title("environment with dynamic obstacles")
+# plt.xlabel("number of interactions")
+# plt.ylabel("average return")
+# plt.legend()
 # plt.show()
-log_dir  = "./return_log/point-gremlin-v2-eval.csv"
 
-arr = np.genfromtxt(log_dir)
-plt.plot(arr)
+# 3 pillars
+pillar_3_log_dir = "./return_log/point-pillar-gru-v0-eval.csv"
+# 8 pillars
+pillar_8_log_dir = "./return_log/point-pillar-gru-v1-eval.csv"
+
+pillar_3 = np.genfromtxt(pillar_3_log_dir)
+pillar_8 = np.genfromtxt(pillar_8_log_dir)
+
+plt.plot(5000*np.arange(1,65), pillar_3, label='num_obstacle: 3')
+plt.plot(5000*np.arange(1,65), pillar_8[:64], label='num_obstacle: 8')
+plt.title("environment with stacle obstacle")
+plt.xlabel("number of interactions")
+plt.ylabel("average return")
+plt.legend()
 plt.show()
-# df = pd.read_csv(log_dir)
-# print(df)

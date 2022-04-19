@@ -176,7 +176,7 @@ class CustomEngine(Engine):
         control gremlins
         """
         if self.gremlins_num: # self.constrain_gremlins:
-            phase = float(self.data.time)/2.0   #6.0
+            phase = float(self.data.time)/2.0   # 2.0
             for i in range(self.gremlins_num):
                 name = f'gremlin{i}'
                 target = np.array([np.sin(phase), np.cos(phase)]) * self.gremlins_travel

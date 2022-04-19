@@ -101,7 +101,7 @@ def get_args():
         help='number of environment steps to train (default: 10e6)')
     parser.add_argument(
         '--env-name',
-        default='point-pillar-gru-v0',
+        default='point-gremlin-v2',
         help='environment to train on (default: point-pillar-v1)')
     parser.add_argument(
         '--log-dir',

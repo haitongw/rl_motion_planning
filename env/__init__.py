@@ -473,7 +473,7 @@ config14 = {
     'play': False,   # control robot from keyboard, Up, Down, Left, Right
     'robot_base': 'xmls/new_point.xml',  # Which robot XML to use as the base
     # 'placements_extents': [-1.5, -1.5, 1.5, 1.5],  # Placement limits (min X, min Y, max X, max Y)
-    'num_steps':2000,   # 4000
+    'num_steps':4000,   # 4000
     'task': 'goal',
     'observation_flatten': True,
     'observe_goal_comp': True,
@@ -512,7 +512,6 @@ config14 = {
 register(id='point-gremlin-v2',
         entry_point='env.custom_env:CustomEngine',
         kwargs={'config':config14})
-
 
 # exponential penalty for getting too close to obstacle
 config15 = {
@@ -582,6 +581,7 @@ config16 = {
     'reward_goal': 30.0,       # sparse reward
     # 'goal_placements': [(-1.5, -1.5, 1.5, 1.5)],
     'gremlins_placements': [(-2.5,-2.5,2.5,2.5)],
+    'pillars_placements' : [(-2.5,-2.5,2.5,2.5)],
     'custom_observation': { 'padding_obs':False,
                             'observe_robot_vel': True,
                             'observe_robot_pos': False,
@@ -604,3 +604,141 @@ config16 = {
 register(id='point-pillar-gru-v0',
         entry_point='env.custom_env:CustomEngine',
         kwargs={'config':config16})
+
+config17 = {
+    'play': False,   # control robot from keyboard, Up, Down, Left, Right
+    'robot_base': 'xmls/new_point.xml',  # Which robot XML to use as the base
+    'placements_extents': [-2., -2., 2., 2.],  # Placement limits (min X, min Y, max X, max Y)
+    'num_steps':4000,
+    'task': 'goal',
+    'observation_flatten': True,
+    'observe_goal_comp': True,
+    'observe_goal_dist': True,  # 0->1 distance closer to the goal, value closer to 1
+    'pillars_num': 8,
+    'gremlins_num': 0,
+    'sensors_obs': [],
+    'constrain_pillars': True,
+    'constrain_gremlins': False,
+    'gremlins_keepout': 0.5,  # Radius for keeping out (contains gremlin path)
+    'gremlins_travel': 0.8,  # Radius of the circle traveled in
+    'gremlins_size': 0.1,  # Half-size (radius) of gremlin objects
+    'gremlins_density': 0.001,  # Density of gremlins
+    'reward_distance': 1.0,   # dense reward
+    'reward_goal': 30.0,       # sparse reward
+    # 'goal_placements': [(-1.5, -1.5, 1.5, 1.5)],
+    'gremlins_placements': [(-2.5,-2.5,2.5,2.5)],
+    'pillars_placements' : [(-2.5,-2.5,2.5,2.5)],
+    'custom_observation': { 'padding_obs':False,
+                            'observe_robot_vel': True,
+                            'observe_robot_pos': False,
+                            'observe_robot_yaw': False,
+                            'observe_v_pref': False,
+                            'observe_robot_radius': False,
+                            'observe_pillar_pos': False,
+                            'observe_pillar_radius': False,
+                            'observe_pillar_compass': True,
+                            'observe_pillar_dist': True,
+                            'observe_gremlin_vel': False,
+                            'observe_gremlin_compass': False,
+                            'observe_gremlin_dist': False,
+                            'collision_penalty': 0.1,
+                            'too_close_penalty': 0.1,
+                            'too_close_dist': 0.4,
+                            'nonlinear_penalty': True,
+                            }
+}
+register(id='point-pillar-gru-v1',
+        entry_point='env.custom_env:CustomEngine',
+        kwargs={'config':config17})
+
+
+# exponential penalty for getting too close to obstacle
+config18 = {
+    'play': False,   # control robot from keyboard, Up, Down, Left, Right
+    'robot_base': 'xmls/new_point.xml',  # Which robot XML to use as the base
+    # 'placements_extents': [-1.5, -1.5, 1.5, 1.5],  # Placement limits (min X, min Y, max X, max Y)
+    'num_steps':4000,   # 4000
+    'task': 'goal',
+    'observation_flatten': True,
+    'observe_goal_comp': True,
+    'observe_goal_dist': True,  # 0->1 distance closer to the goal, value closer to 1
+    'pillars_num': 0,
+    'gremlins_num': 4,
+    'sensors_obs': [],
+    'constrain_pillars': False,
+    'constrain_gremlins': True,
+    'gremlins_keepout': 0.5,  # Radius for keeping out (contains gremlin path)
+    'gremlins_travel': 0.8,  # Radius of the circle traveled in
+    'gremlins_size': 0.1,  # Half-size (radius) of gremlin objects
+    'gremlins_density': 0.001,  # Density of gremlins
+    # 'gremlins_placements': [(-1.5,-1.5,1.5,1.5)],
+    'reward_distance': 1.0,   # dense reward
+    'reward_goal': 30.0,       # sparse reward
+    'custom_observation': { 'padding_obs':False,
+                            'observe_robot_vel': True,
+                            'observe_robot_pos': False,
+                            'observe_robot_yaw': False,
+                            'observe_v_pref': False,
+                            'observe_robot_radius': False,
+                            'observe_pillar_pos': False,
+                            'observe_pillar_radius': False,
+                            'observe_pillar_compass': False,
+                            'observe_pillar_dist': False,
+                            'observe_gremlin_vel': True,
+                            'observe_gremlin_compass': True,
+                            'observe_gremlin_dist': True,
+                            'collision_penalty': 0.1,
+                            'too_close_penalty': 0.1,
+                            'too_close_dist': 0.4,
+                            'nonlinear_penalty': True,
+                            }
+}
+register(id='point-gremlin-v3',
+        entry_point='env.custom_env:CustomEngine',
+        kwargs={'config':config18})
+
+
+# exponential penalty for getting too close to obstacle
+config19 = {
+    'play': False,   # control robot from keyboard, Up, Down, Left, Right
+    'robot_base': 'xmls/new_point.xml',  # Which robot XML to use as the base
+    # 'placements_extents': [-1.5, -1.5, 1.5, 1.5],  # Placement limits (min X, min Y, max X, max Y)
+    'num_steps':4000,   # 4000
+    'task': 'goal',
+    'observation_flatten': True,
+    'observe_goal_comp': True,
+    'observe_goal_dist': True,  # 0->1 distance closer to the goal, value closer to 1
+    'pillars_num': 0,
+    'gremlins_num': 12,
+    'sensors_obs': [],
+    'constrain_pillars': False,
+    'constrain_gremlins': True,
+    'gremlins_keepout': 0.5,  # Radius for keeping out (contains gremlin path)
+    'gremlins_travel': 0.8,  # Radius of the circle traveled in
+    'gremlins_size': 0.1,  # Half-size (radius) of gremlin objects
+    'gremlins_density': 0.001,  # Density of gremlins
+    'gremlins_placements': [(-3.,-3.,3.,3.)],
+    'reward_distance': 1.0,   # dense reward
+    'reward_goal': 30.0,       # sparse reward
+    'custom_observation': { 'padding_obs':False,
+                            'observe_robot_vel': True,
+                            'observe_robot_pos': False,
+                            'observe_robot_yaw': False,
+                            'observe_v_pref': False,
+                            'observe_robot_radius': False,
+                            'observe_pillar_pos': False,
+                            'observe_pillar_radius': False,
+                            'observe_pillar_compass': False,
+                            'observe_pillar_dist': False,
+                            'observe_gremlin_vel': True,
+                            'observe_gremlin_compass': True,
+                            'observe_gremlin_dist': True,
+                            'collision_penalty': 0.1,
+                            'too_close_penalty': 0.1,
+                            'too_close_dist': 0.4,
+                            'nonlinear_penalty': True,
+                            }
+}
+register(id='point-gremlin-v4',
+        entry_point='env.custom_env:CustomEngine',
+        kwargs={'config':config19})
