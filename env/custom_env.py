@@ -1,5 +1,4 @@
 from safety_gym.envs.engine import Engine
-# from gym.utils.env_checker import check_env
 from gym.spaces import Box, Discrete
 import numpy as np
 import pygame
@@ -110,20 +109,6 @@ class CustomEngine(Engine):
             obs['robot_yaw'] = np.array([mat2yaw(self.world.robot_mat())])
         if self.observe_v_pref:
             obs['v_pref'] = self.v_pref * 10    #TODO: fix this
-        # if self.observe_robot_radius:
-        #     obs['robot_radius'] = np.array([self.robot_radius]) # robot radius
-        # if self.observe_pillar_pos:
-        #     obs['pillar_pos'] = np.array(self.pillars_pos)[:,:2]
-        # if self.observe_pillar_radius:
-        #     obs['pillar_radius'] = np.array([self.pillars_size])
-        # if self.observe_pillar_compass:
-        #     # obs['pillar_compass'] = np.array(list(map(self.obs_compass_without_norm, self.pillars_pos)))
-        #     obs['pillar_compass'] = np.array(list(map(self.obs_compass, self.pillars_pos)))
-        # if self.observe_pillar_dist:
-        #     pillar_position = np.array(self.pillars_pos)[:,:2]
-        #     distance_array = np.hypot(self.robot_pos[:2][0] - pillar_position[:,0],
-        #                               self.robot_pos[:2][1] - pillar_position[:,1])
-        #     obs['pillar_dist'] = np.exp(-(distance_array-0.38))
         if self.pillars_num > 0:
             obs['y_pillar_state'] = np.zeros((self.pillars_num, 4))
             if self.observe_pillar_compass:

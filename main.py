@@ -1,3 +1,14 @@
+"""
+@misc{pytorchrl,
+  author = {Kostrikov, Ilya},
+  title = {PyTorch Implementations of Reinforcement Learning Algorithms},
+  year = {2018},
+  publisher = {GitHub},
+  journal = {GitHub repository},
+  howpublished = {\url{https://github.com/ikostrikov/pytorch-a2c-ppo-acktr-gail}},
+}
+"""
+
 import copy
 import os
 import time
@@ -171,13 +182,6 @@ def main():
                         np.median(episode_rewards), np.min(episode_rewards),
                         np.max(episode_rewards), dist_entropy, value_loss,
                         action_loss))
-
-        # if (args.eval_interval is not None and len(episode_rewards) > 1
-        #         and j % args.eval_interval == 0):
-        #     obs_rms = utils.get_vec_normalize(envs).obs_rms
-        #     evaluate(actor_critic, obs_rms, args.env_name, args.seed,
-        #              args.num_processes, eval_log_dir, device)
-
 
 if __name__ == "__main__":
     main()
